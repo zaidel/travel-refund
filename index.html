@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f5fa8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>דיווח הוצאות נסיעה</title>
+<style>
+  :root {
+    --bg: #f2f4f8; --card: #ffffff; --ink: #1b2430; --muted: #66727f;
+    --line: #d9dfe7; --accent: #1f5fa8; --accent-ink: #ffffff; --soft: #e6eef8;
+    --danger: #b3261e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Arial, "Noto Sans Hebrew", sans-serif;
+    font-size: 16px; line-height: 1.4;
+    padding: 0 0 calc(24px + env(safe-area-inset-bottom));
+  }
+  header.top {
+    background: var(--accent); color: var(--accent-ink);
+    padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
+  }
+  header.top h1 { margin: 0; font-size: 20px; }
+  header.top p { margin: 2px 0 0; font-size: 13px; opacity: .85; }
+  main { max-width: 560px; margin: 0 auto; padding: 12px 12px 0; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px; margin-bottom: 12px;
+  }
+  .card h2 { margin: 0 0 10px; font-size: 17px; }
+  details.card > summary {
+    font-size: 17px; font-weight: 700; cursor: pointer; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::after { content: "▾"; color: var(--muted); }
+  details.card[open] > summary::after { content: "▴"; }
+  details.card[open] > summary { margin-bottom: 12px; }
+
+  label.f { display: block; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
+  label.f input {
+    display: block; width: 100%; margin-top: 4px; padding: 10px 12px;
+    font: inherit; font-size: 16px; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px; background: #fff;
+  }
+  label.f input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  h3.sub { margin: 14px 0 8px; font-size: 14px; color: var(--accent); border-top: 1px solid var(--line); padding-top: 12px; }
+
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--soft); border-radius: 12px; padding: 4px; gap: 4px; }
+  .seg button {
+    font: inherit; font-weight: 600; padding: 10px 6px; border: 0; border-radius: 9px;
+    background: transparent; color: var(--accent); cursor: pointer;
+  }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); }
+
+  .calhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .calhead strong { font-size: 17px; }
+  .calhead button {
+    width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+    background: #fff; font-size: 20px; color: var(--accent); cursor: pointer;
+  }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .dow { text-align: center; font-size: 12px; color: var(--muted); padding: 2px 0 4px; }
+  .day {
+    aspect-ratio: 1 / 1; min-height: 40px; border: 1px solid var(--line); border-radius: 10px;
+    background: #fff; font: inherit; font-size: 16px; color: var(--ink); cursor: pointer; padding: 0;
+  }
+  .day.weekend { background: #f6f7f9; color: #9aa4af; }
+  .day.today { border-color: var(--accent); border-width: 2px; }
+  .day.sel { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+  .summary { margin-top: 12px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-size: 14px; }
+  .summary b { font-size: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 13px; }
+  .linkbtn { background: none; border: 0; color: var(--danger); font: inherit; font-size: 14px; padding: 8px 0 0; cursor: pointer; }
+
+  .btn {
+    display: block; width: 100%; padding: 14px; margin-top: 8px; border-radius: 12px;
+    font: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
+    border: 1px solid var(--accent); background: #fff; color: var(--accent);
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .hint { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+
+  #sigpad { width: 100%; height: 130px; border: 1px dashed #9aa4af; border-radius: 10px; background: #fff; touch-action: none; display: block; }
+  #preview canvas { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; display: block; margin-bottom: 8px; background: #fff; }
+
+  #toast {
+    position: fixed; inset-inline: 16px; bottom: calc(20px + env(safe-area-inset-bottom));
+    background: #1b2430; color: #fff; padding: 12px 14px; border-radius: 12px; text-align: center;
+    font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 10;
+    max-width: 520px; margin: 0 auto;
+  }
+  #toast.show { opacity: .96; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>דיווח הוצאות נסיעה</h1>
+  <p>בחירת ימי עבודה, יצירת הטופס ושליחה במייל</p>
+</header>
+
+<main>
+  <!-- Travel mode -->
+  <section class="card">
+    <h2>אמצעי נסיעה</h2>
+    <div class="seg" id="modeSeg">
+      <button type="button" data-mode="car">רכב פרטי</button>
+      <button type="button" data-mode="public">תחבורה ציבורית</button>
+    </div>
+  </section>
+
+  <!-- Calendar -->
+  <section class="card">
+    <h2>ימי עבודה</h2>
+    <div class="calhead">
+      <button type="button" id="prevM" aria-label="החודש הקודם">›</button>
+      <strong id="monthTitle"></strong>
+      <button type="button" id="nextM" aria-label="החודש הבא">‹</button>
+    </div>
+    <div class="grid" id="dow"></div>
+    <div class="grid" id="days"></div>
+    <div class="summary" id="summary"></div>
+    <button type="button" class="linkbtn" id="clearDates">ניקוי כל התאריכים</button>
+  </section>
+
+  <!-- Saved details -->
+  <details class="card" id="detailsCard">
+    <summary>פרטים קבועים (נשמרים בטלפון)</summary>
+
+    <label class="f">שם המרצה<input data-key="name" autocomplete="name"></label>
+    <div class="row2">
+      <label class="f">מספר זהות<input data-key="idnum" inputmode="numeric"></label>
+      <label class="f">מטרת הנסיעה<input data-key="purpose"></label>
+    </div>
+    <label class="f">כתובת<input data-key="address" autocomplete="street-address"></label>
+
+    <h3 class="sub">מסלול</h3>
+    <div class="row2">
+      <label class="f">מהבית (ממקום)<input data-key="from"></label>
+      <label class="f">לעבודה (למקום)<input data-key="to"></label>
+    </div>
+    <div class="row2">
+      <label class="f">ק"מ לכיוון אחד (רכב)<input data-key="km" inputmode="decimal"></label>
+      <label class="f">תעריף לכיוון אחד ₪ (תחב"צ)<input data-key="fare" inputmode="decimal"></label>
+    </div>
+
+    <h3 class="sub">כתובות מייל</h3>
+    <label class="f">מייל המשרד<input data-key="officeEmail" type="email" dir="ltr" autocomplete="off"></label>
+    <label class="f">המייל האישי שלי (להעתק)<input data-key="personalEmail" type="email" dir="ltr" autocomplete="email"></label>
+
+    <h3 class="sub">חתימה</h3>
+    <canvas id="sigpad" width="600" height="200"></canvas>
+    <button type="button" class="linkbtn" id="clearSig">מחיקת החתימה</button>
+    <p class="hint">הפרטים נשמרים אוטומטית במכשיר הזה בלבד.</p>
+  </details>
+
+  <!-- Send -->
+  <section class="card">
+    <h2>הטופס</h2>
+    <div id="preview"></div>
+    <button type="button" class="btn primary" id="shareBtn">שליחת הטופס (PDF)</button>
+    <button type="button" class="btn" id="downloadBtn">הורדת ה‑PDF</button>
+    <button type="button" class="btn" id="mailBtn">פתיחת מייל עם הנמענים</button>
+    <p class="hint" id="sendHint"></p>
+  </section>
+</main>
+
+<div id="toast" role="status"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Saved settings ----------
+  var KEY = 'transportRefund.v1';
+  var DATES_KEY = 'transportRefund.dates';
+  var defaults = {
+    name: '', idnum: '', address: '', purpose: 'הוראה',
+    from: 'מזכרת בתיה', to: 'הרצוג',
+    mode: 'car', km: '', fare: '',
+    officeEmail: '', personalEmail: '', signature: ''
+  };
+  var S = Object.assign({}, defaults);
+  try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  // Dates survive an accidental reload of the tab, but a fresh visit starts empty.
+  var selected = new Set();
+  try { JSON.parse(sessionStorage.getItem(DATES_KEY) || '[]').forEach(function (d) { selected.add(d); }); } catch (e) {}
+  function saveDates() { try { sessionStorage.setItem(DATES_KEY, JSON.stringify(Array.from(selected))); } catch (e) {} }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3200);
+  }
+
+  // ---------- Helpers ----------
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function iso(y, m, d) { return y + '-' + pad2(m + 1) + '-' + pad2(d); }
+  function heDate(isoStr) { var p = isoStr.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function num(v) { var n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : 0; }
+  function fmt(n) { return String(Math.round(n * 100) / 100); }
+  function sortedDates() { return Array.from(selected).sort(); }
+  var MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+  function buildRows() {
+    var rows = [], n = 1;
+    sortedDates().forEach(function (d) {
+      rows.push({ n: n++, date: heDate(d), from: S.from, to: S.to });
+      rows.push({ n: n++, date: heDate(d), from: S.to, to: S.from });
+    });
+    return rows;
+  }
+  function totals() {
+    var trips = selected.size * 2;
+    return { days: selected.size, trips: trips, km: trips * num(S.km), fare: trips * num(S.fare) };
+  }
+  function periodLabel() {
+    var ds = sortedDates(); if (!ds.length) return '';
+    var a = ds[0].split('-'), b = ds[ds.length - 1].split('-');
+    var first = MONTHS[+a[1] - 1] + ' ' + a[0], last = MONTHS[+b[1] - 1] + ' ' + b[0];
+    return first === last ? first : first + ' – ' + last;
+  }
+
+  // ---------- Settings form ----------
+  document.querySelectorAll('input[data-key]').forEach(function (el) {
+    el.value = S[el.dataset.key] || '';
+    el.addEventListener('input', function () { S[el.dataset.key] = el.value.trim(); save(); refreshSoon(); });
+  });
+  if (!S.name) $('detailsCard').open = true;
+
+  function renderMode() {
+    document.querySelectorAll('#modeSeg button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.mode === S.mode);
+    });
+  }
+  $('modeSeg').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    S.mode = b.dataset.mode; save(); renderMode(); refresh();
+  });
+
+  // ---------- Signature pad ----------
+  var pad = $('sigpad'), pg = pad.getContext('2d'), drawing = false, sigImg = null;
+  pg.lineWidth = 3; pg.lineCap = 'round'; pg.lineJoin = 'round'; pg.strokeStyle = '#10227a';
+  function loadSig() {
+    sigImg = null;
+    if (!S.signature) return;
+    var im = new Image();
+    im.onload = function () { sigImg = im; pg.clearRect(0, 0, pad.width, pad.height); pg.drawImage(im, 0, 0); refresh(); };
+    im.src = S.signature;
+  }
+  function padPos(e) {
+    var r = pad.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * pad.width / r.width, y: (e.clientY - r.top) * pad.height / r.height };
+  }
+  pad.addEventListener('pointerdown', function (e) {
+    drawing = true; pad.setPointerCapture(e.pointerId);
+    var p = padPos(e); pg.beginPath(); pg.moveTo(p.x, p.y); e.preventDefault();
+  });
+  pad.addEventListener('pointermove', function (e) {
+    if (!drawing) return; var p = padPos(e); pg.lineTo(p.x, p.y); pg.stroke(); e.preventDefault();
+  });
+  function endStroke() {
+    if (!drawing) return; drawing = false;
+    S.signature = pad.toDataURL('image/png'); save(); loadSig();
+  }
+  pad.addEventListener('pointerup', endStroke);
+  pad.addEventListener('pointercancel', endStroke);
+  $('clearSig').addEventListener('click', function () {
+    pg.clearRect(0, 0, pad.width, pad.height); S.signature = ''; sigImg = null; save(); refresh();
+  });
+
+  // ---------- Calendar ----------
+  var now = new Date(), viewY = now.getFullYear(), viewM = now.getMonth();
+  var todayIso = iso(now.getFullYear(), now.getMonth(), now.getDate());
+  ['א','ב','ג','ד','ה','ו','ש'].forEach(function (d) {
+    var el = document.createElement('div'); el.className = 'dow'; el.textContent = d; $('dow').appendChild(el);
+  });
+  function renderCalendar() {
+    $('monthTitle').textContent = MONTHS[viewM] + ' ' + viewY;
+    var box = $('days'); box.innerHTML = '';
+    var first = new Date(viewY, viewM, 1).getDay();
+    var count = new Date(viewY, viewM + 1, 0).getDate();
+    for (var i = 0; i < first; i++) box.appendChild(document.createElement('div'));
+    for (var d = 1; d <= count; d++) {
+      var b = document.createElement('button');
+      var key = iso(viewY, viewM, d), wd = (first + d - 1) % 7;
+      b.type = 'button'; b.className = 'day'; b.textContent = d; b.dataset.date = key;
+      if (wd >= 5) b.classList.add('weekend');
+      if (key === todayIso) b.classList.add('today');
+      if (selected.has(key)) b.classList.add('sel');
+      b.setAttribute('aria-pressed', selected.has(key));
+      box.appendChild(b);
+    }
+  }
+  $('days').addEventListener('click', function (e) {
+    var b = e.target.closest('.day'); if (!b) return;
+    var k = b.dataset.date;
+    if (selected.has(k)) selected.delete(k); else selected.add(k);
+    b.classList.toggle('sel', selected.has(k)); b.setAttribute('aria-pressed', selected.has(k));
+    saveDates(); refresh();
+  });
+  $('prevM').addEventListener('click', function () { if (--viewM < 0) { viewM = 11; viewY--; } renderCalendar(); });
+  $('nextM').addEventListener('click', function () { if (++viewM > 11) { viewM = 0; viewY++; } renderCalendar(); });
+  $('clearDates').addEventListener('click', function () {
+    if (!selected.size) return;
+    if (!confirm('לנקות את כל התאריכים שנבחרו?')) return;
+    selected.clear(); saveDates(); renderCalendar(); refresh();
+  });
+
+  function renderSummary() {
+    var t = totals(), el = $('summary');
+    if (!t.days) { el.innerHTML = 'לחצו על ימי העבודה בלוח. כל יום מוסיף שתי שורות לטופס – הלוך וחזור.'; return; }
+    var line = '<b>' + t.days + '</b> ימי עבודה · <b>' + t.trips + '</b> נסיעות';
+    if (S.mode === 'car') line += ' · סה"כ <b>' + fmt(t.km) + '</b> ק"מ';
+    else line += ' · סה"כ <b>' + fmt(t.fare) + '</b> ₪';
+    var chips = sortedDates().map(function (d) { return '<span class="chip">' + heDate(d).slice(0, 5) + '</span>'; }).join('');
+    el.innerHTML = line + '<div class="chips">' + chips + '</div>';
+  }
+
+  // ---------- Drawing the form (A4 at 150dpi) ----------
+  var W = 1240, H = 1754, M = 90, ROW_H = 44, HEAD_H = 110, TABLE_TOP = 390;
+  var FULL_MAX = 26, LAST_MAX = 18, MIN_ROWS = 13;
+  var COLS = [
+    { w: 90,  head: ["מס'", 'נסיעות'] },
+    { w: 150, head: ['תאריך', 'הנסיעה'] },
+    { w: 220, head: ['מטרת הנסיעה'] },
+    { w: 165, head: ['ממקום'] },
+    { w: 165, head: ['למקום'] },
+    { w: 170, head: ['מס\' ק"מ', '(ימולא ע"י הנוסעים', 'ברכבם הפרטי)'] },
+    { w: 100, head: ['תעריף', 'לתחבורה', 'ציבורית'] }
+  ];
+  function font(px, bold) { return (bold ? 'bold ' : '') + px + 'px Arial, "Noto Sans Hebrew", "Arial Hebrew", sans-serif'; }
+  function fit(g, text, maxW, px, bold) {
+    g.font = font(px, bold);
+    while (px > 11 && g.measureText(text).width > maxW) { px--; g.font = font(px, bold); }
+  }
+  function paginate(rows) {
+    var pages = [], rest = rows.slice();
+    while (rest.length > LAST_MAX) pages.push(rest.splice(0, Math.min(FULL_MAX, rest.length - 1)));
+    pages.push(rest);
+    return pages;
+  }
+
+  function drawPage(rows, pageNo, pageCount) {
+    var isLast = pageNo === pageCount;
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#000'; g.strokeStyle = '#000'; g.direction = 'rtl'; g.textBaseline = 'alphabetic';
+
+    // Header
+    g.textAlign = 'right'; g.font = font(22); g.fillText('בס"ד', W - M, 110);
+    g.textAlign = 'center'; g.font = font(40, true); g.fillText('טופס דיווח הוצאות נסיעה', W / 2, 165);
+
+    function field(label, value, xRight, y, lineW) {
+      g.textAlign = 'right'; g.font = font(24); g.fillText(label, xRight, y);
+      var x2 = xRight - g.measureText(label).width - 12, x1 = x2 - lineW;
+      g.lineWidth = 1.5; g.beginPath(); g.moveTo(x1, y + 6); g.lineTo(x2, y + 6); g.stroke();
+      if (value) { fit(g, value, lineW - 12, 24, false); g.textAlign = 'right'; g.fillText(value, x2 - 6, y - 2); }
+    }
+    field('שם המרצה', S.name, W - M, 270, 300);
+    field('מ.ז.', S.idnum, 700, 270, 260);
+    field('כתובת', S.address, W - M, 335, 340);
+    field('נסיעה ברכב פרטי / תחבורה ציבורית', S.mode === 'car' ? 'רכב פרטי' : 'תחבורה ציבורית', 700, 335, 200);
+
+    // Table geometry (columns run right to left)
+    var xs = [], x = W - M;
+    COLS.forEach(function (col) { xs.push({ r: x, l: x - col.w }); x -= col.w; });
+    var tableL = x, tableR = W - M;
+    var padRows = Math.max(rows.length, pageCount === 1 ? MIN_ROWS : 0);
+    var bodyRows = padRows + (isLast ? 1 : 0);
+    var tableBottom = TABLE_TOP + HEAD_H + bodyRows * ROW_H;
+
+    g.lineWidth = 2; g.strokeRect(tableL, TABLE_TOP, tableR - tableL, tableBottom - TABLE_TOP);
+    g.lineWidth = 1.2;
+    xs.forEach(function (cx, i) { if (i) { g.beginPath(); g.moveTo(cx.r, TABLE_TOP); g.lineTo(cx.r, tableBottom); g.stroke(); } });
+    for (var r = 0; r < bodyRows; r++) {
+      var ly = TABLE_TOP + HEAD_H + r * ROW_H;
+      g.beginPath(); g.moveTo(tableL, ly); g.lineTo(tableR, ly); g.stroke();
+    }
+
+    // Column headings
+    g.textAlign = 'center';
+    COLS.forEach(function (col, i) {
+      var cxm = (xs[i].l + xs[i].r) / 2, lh = 27;
+      var y0 = TABLE_TOP + HEAD_H / 2 - (col.head.length - 1) * lh / 2 + 7;
+      col.head.forEach(function (t, k) { fit(g, t, col.w - 10, 20, true); g.fillText(t, cxm, y0 + k * lh); });
+    });
+
+    // Rows
+    function cell(i, rowIdx, text) {
+      if (text === '' || text == null) return;
+      fit(g, String(text), COLS[i].w - 12, 21, false);
+      g.textAlign = 'center';
+      g.fillText(String(text), (xs[i].l + xs[i].r) / 2, TABLE_TOP + HEAD_H + rowIdx * ROW_H + 30);
+    }
+    rows.forEach(function (row, idx) {
+      cell(0, idx, row.n); cell(1, idx, row.date); cell(2, idx, S.purpose);
+      cell(3, idx, row.from); cell(4, idx, row.to);
+      if (S.mode === 'car') cell(5, idx, S.km ? fmt(num(S.km)) : '');
+      else cell(6, idx, S.fare ? fmt(num(S.fare)) : '');
+    });
+
+    if (isLast) {
+      var t = totals();
+      cell(5, padRows, 'סה"כ ק"מ: ' + (S.mode === 'car' && t.km ? fmt(t.km) : ''));
+      if (S.mode === 'public' && t.fare) cell(6, padRows, fmt(t.fare) + ' ₪');
+
+      // Signature
+      var fy = tableBottom + 75;
+      g.textAlign = 'center'; g.font = font(24, true); g.fillText('חתימת המרצה', M + 170, fy);
+      if (sigImg) {
+        var bw = 280, bh = 95, sc = Math.min(bw / sigImg.width, bh / sigImg.height);
+        g.drawImage(sigImg, M + 170 - sigImg.width * sc / 2, fy + 12 + (bh - sigImg.height * sc) / 2, sigImg.width * sc, sigImg.height * sc);
+      }
+      g.lineWidth = 1.5; g.beginPath(); g.moveTo(M + 50, fy + 112); g.lineTo(M + 290, fy + 112); g.stroke();
+
+      // Office part (left blank on purpose)
+      var oy = fy + 165;
+      g.textAlign = 'right'; g.font = font(22, true);
+      var ot = 'למילוי ע"י מרכז מינהל מורים'; g.fillText(ot, W - M, oy);
+      var ow = g.measureText(ot).width; g.beginPath(); g.moveTo(W - M - ow, oy + 5); g.lineTo(W - M, oy + 5); g.stroke();
+      g.font = font(22);
+      g.fillText('יש לשלם לנ"ל סה"כ __________ ק"מ לפי תעריף __________ סה"כ __________ ₪ לתשלום', W - M, oy + 55);
+      g.fillText('אשור לתשלום ______________________', W - M, oy + 110);
+    }
+    if (pageCount > 1) {
+      g.textAlign = 'center'; g.font = font(18); g.fillText('עמוד ' + pageNo + ' מתוך ' + pageCount, W / 2, H - 45);
+    }
+    return c;
+  }
+
+  function renderPages() {
+    var pages = paginate(buildRows());
+    return pages.map(function (rows, i) { return drawPage(rows, i + 1, pages.length); });
+  }
+
+  // ---------- Minimal PDF writer (one JPEG per A4 page) ----------
+  function b64bytes(dataUrl) {
+    var bin = atob(dataUrl.split(',')[1]), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function buildPdf(canvases) {
+    var enc = new TextEncoder(), chunks = [], offset = 0, offsets = [];
+    function put(x) { var b = typeof x === 'string' ? enc.encode(x) : x; chunks.push(b); offset += b.length; }
+    function obj(n, body) { offsets[n] = offset; put(n + ' 0 obj\n' + body + '\nendobj\n'); }
+    var n = canvases.length, kids = [];
+    for (var i = 0; i < n; i++) kids.push((3 + i * 3) + ' 0 R');
+    put('%PDF-1.4\n%âãÏÓ\n');
+    obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2, '<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + n + ' >>');
+    canvases.forEach(function (c, i) {
+      var p = 3 + i * 3, jpg = b64bytes(c.toDataURL('image/jpeg', 0.92));
+      var content = 'q 595.28 0 0 841.89 0 0 cm /Im0 Do Q';
+      obj(p, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents ' + (p + 1) +
+             ' 0 R /Resources << /XObject << /Im0 ' + (p + 2) + ' 0 R >> >> >>');
+      obj(p + 1, '<< /Length ' + content.length + ' >>\nstream\n' + content + '\nendstream');
+      offsets[p + 2] = offset;
+      put((p + 2) + ' 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + c.width + ' /Height ' + c.height +
+          ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>\nstream\n');
+      put(jpg); put('\nendstream\nendobj\n');
+    });
+    var total = 3 + n * 3, xref = offset, s = 'xref\n0 ' + total + '\n0000000000 65535 f \n';
+    for (var k = 1; k < total; k++) s += ('0000000000' + offsets[k]).slice(-10) + ' 00000 n \n';
+    put(s + 'trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+    return new Blob(chunks, { type: 'application/pdf' });
+  }
+
+  // ---------- Sending ----------
+  function fileName() {
+    var ds = sortedDates(), stamp = ds.length ? ds[0].slice(0, 7) : todayIso.slice(0, 7);
+    return 'travel-refund-' + stamp + '.pdf';
+  }
+  function subject() { return 'טופס דיווח הוצאות נסיעה – ' + (S.name || '') + (periodLabel() ? ' – ' + periodLabel() : ''); }
+  function bodyText() {
+    var t = totals(), lines = ['שלום,', '', 'מצורף טופס דיווח הוצאות נסיעה' + (periodLabel() ? ' עבור ' + periodLabel() : '') + '.', ''];
+    lines.push('ימי עבודה: ' + t.days + ' (' + t.trips + ' נסיעות, ' + S.from + ' ⇄ ' + S.to + ')');
+    lines.push('תאריכים: ' + sortedDates().map(heDate).join(', '));
+    lines.push(S.mode === 'car' ? 'רכב פרטי – סה"כ ' + fmt(t.km) + ' ק"מ' : 'תחבורה ציבורית – סה"כ ' + fmt(t.fare) + ' ₪');
+    lines.push('', 'תודה,', S.name || '');
+    return lines.join('\n');
+  }
+  function ready() {
+    if (!selected.size) { toast('קודם יש לבחור ימי עבודה בלוח'); return false; }
+    return true;
+  }
+  function missingNote() {
+    var m = [];
+    if (!S.name) m.push('שם');
+    if (S.mode === 'car' && !num(S.km)) m.push('ק"מ לכיוון');
+    if (S.mode === 'public' && !num(S.fare)) m.push('תעריף לכיוון');
+    return m.length ? 'שימו לב – חסר: ' + m.join(', ') : '';
+  }
+  function download(blob) {
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 60000);
+  }
+  function copyRecipients() {
+    var r = [S.officeEmail, S.personalEmail].filter(Boolean).join(', ');
+    if (r && navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(r).catch(function () {});
+    return r;
+  }
+  function openMail() {
+    var q = [];
+    if (S.personalEmail) q.push('cc=' + encodeURIComponent(S.personalEmail));
+    q.push('subject=' + encodeURIComponent(subject()));
+    q.push('body=' + encodeURIComponent(bodyText()));
+    location.href = 'mailto:' + encodeURIComponent(S.officeEmail || '') + '?' + q.join('&');
+  }
+
+  $('shareBtn').addEventListener('click', function () {
+    if (!ready()) return;
+    var blob = buildPdf(renderPages());
+    var file = new File([blob], fileName(), { type: 'application/pdf' });
+    var data = { files: [file], title: subject(), text: bodyText() };
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      var r = copyRecipients();
+      navigator.share(data).then(function () {
+        if (r) toast('כתובות הנמענים הועתקו – אפשר להדביק בשדה "אל"');
+      }).catch(function (err) {
+        if (err && err.name !== 'AbortError') { download(blob); toast('השיתוף נכשל – הקובץ הורד למכשיר'); }
+      });
+    } else {
+      download(blob);
+      toast('הקובץ הורד. פתחו מייל וצרפו אותו.');
+    }
+  });
+  $('downloadBtn').addEventListener('click', function () {
+    if (!ready()) return;
+    download(buildPdf(renderPages()));
+    toast(missingNote() || 'ה‑PDF הורד למכשיר');
+  });
+  $('mailBtn').addEventListener('click', function () {
+    if (!ready()) return;
+    if (!S.officeEmail) { toast('יש למלא את מייל המשרד בפרטים הקבועים'); $('detailsCard').open = true; return; }
+    openMail();
+  });
+
+  // ---------- Refresh ----------
+  var refreshTimer;
+  function refreshSoon() { clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 250); }
+  function refresh() {
+    renderSummary();
+    var box = $('preview'); box.innerHTML = '';
+    renderPages().forEach(function (c) { box.appendChild(c); });
+    var canShareFiles = false;
+    try { canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'a.pdf', { type: 'application/pdf' })] })); } catch (e) {}
+    $('sendHint').textContent = (missingNote() ? missingNote() + '. ' : '') + (canShareFiles
+      ? '"שליחת הטופס" פותחת את תפריט השיתוף – בחרו באפליקציית המייל. הקובץ מצורף אוטומטית, וכתובות הנמענים מועתקות להדבקה.'
+      : 'בדפדפן הזה אין שיתוף קבצים: הורידו את ה‑PDF, לחצו "פתיחת מייל עם הנמענים" וצרפו את הקובץ.');
+  }
+
+  renderMode(); renderCalendar(); loadSig(); refresh();
+})();
+</script>
+</body>
+</html>
